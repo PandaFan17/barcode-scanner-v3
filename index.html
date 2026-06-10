@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>QR Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    #reader {
+      width: 320px;
+      margin: auto;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+      word-break: break-all;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>QR Code Scanner</h2>
+
+  <div id="reader"></div>
+
+  <div id="result">Waiting for scan...</div>
+
+  <script src="script.js"></script>
+</body>
+</html>
