@@ -1,18 +1,101 @@
-function onScanSuccess(decodedText, decodedResult) {
-  document.getElementById("result").innerText = decodedText;
+import {
+    BrowserMultiFormatReader
+} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 
-  // Optional: stop scanning after first result
-  html5QrcodeScanner.clear();
+const codeReader = new BrowserMultiFormatReader();
+
+const video = document.getElementById("video");
+const cameraSelect = document.getElementById("cameraSelect");
+const startBtn = document.getElementById("startBtn");
+const resultDiv = document.getElementById("result");
+
+let currentControls = null;
+
+async function loadCameras() {
+    try {
+        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+
+        cameraSelect.innerHTML = "";
+
+        devices.forEach((device, index) => {
+            const option = document.createElement("option");
+
+            option.value = device.deviceId;
+            option.text =
+                device.label ||
+                `Camera ${index + 1}`;
+
+            cameraSelect.appendChild(option);
+        });
+
+        if (devices.length === 0) {
+            resultDiv.textContent = "No cameras found.";
+        }
+    } catch (err) {
+        console.error(err);
+        resultDiv.textContent =
+            "Could not access cameras. Check permissions.";
+    }
 }
 
-function onScanFailure(error) {
-  // You can ignore scan errors for cleaner UI
+async function startScanner() {
+
+    if (currentControls) {
+        currentControls.stop();
+    }
+
+    const deviceId = cameraSelect.value;
+
+    resultDiv.textContent = "Scanning...";
+
+    try {
+
+        currentControls =
+            await codeReader.decodeFromVideoDevice(
+                deviceId,
+                video,
+                (result, error) => {
+
+                    if (result) {
+
+                        resultDiv.textContent =
+                            result.getText();
+
+                        console.log(
+                            "QR:",
+                            result.getText()
+                        );
+                    }
+                }
+            );
+
+    } catch (err) {
+        console.error(err);
+        resultDiv.textContent =
+            "Failed to start camera: " +
+            err.message;
+    }
 }
 
-const html5QrcodeScanner = new Html5QrcodeScanner(
-  "reader",
-  { fps: 10, qrbox: 250 },
-  false
-);
+startBtn.addEventListener("click", startScanner);
 
-html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+(async () => {
+
+    try {
+
+        await navigator.mediaDevices.getUserMedia({
+            video: true
+        });
+
+        await loadCameras();
+
+    } catch (err) {
+
+        console.error(err);
+
+        resultDiv.textContent =
+            "Camera permission denied.";
+
+    }
+
+})();
