@@ -4,7 +4,20 @@
   <meta charset="UTF-8" />
   <title>QR Scanner</title>
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script type="module">
+import { BrowserQRCodeReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm";
+
+const codeReader = new BrowserQRCodeReader();
+
+const videoElement = document.createElement("video");
+document.getElementById("reader").appendChild(videoElement);
+
+codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+  if (result) {
+    document.getElementById("result").innerText = result.getText();
+  }
+});
+</script>
 
   <style>
     body {
