@@ -14,12 +14,6 @@ hints.set(
     [BarcodeFormat.CODE_39]
 );
 
-// Enable if your labels use Code 39 check digits.
-// hints.set(
-//     DecodeHintType.ASSUME_CODE_39_CHECK_DIGIT,
-//     true
-// );
-
 const codeReader = new BrowserMultiFormatReader(hints);
 
 const video = document.getElementById("video");
@@ -30,33 +24,6 @@ const resultDiv = document.getElementById("result");
 const statusDiv = document.getElementById("status");
 
 let currentControls = null;
-let lastScan = "";
-
-function beep() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.frequency.value = 1200;
-
-        osc.start();
-
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(
-            0.0001,
-            ctx.currentTime + 0.1
-        );
-
-        osc.stop(ctx.currentTime + 0.1);
-    } catch (e) {
-        console.log("Beep unavailable");
-    }
-}
 
 async function loadCameras() {
     try {
@@ -71,52 +38,45 @@ async function loadCameras() {
             return;
         }
 
-        let preferredCamera = null;
+        let preferred = null;
 
         devices.forEach((device, index) => {
 
             const option = document.createElement("option");
 
             option.value = device.deviceId;
-
             option.textContent =
-                device.label ||
-                `Camera ${index + 1}`;
+                device.label || `Camera ${index + 1}`;
 
             cameraSelect.appendChild(option);
 
-            const label =
-                (device.label || "").toLowerCase();
+            const label = (device.label || "").toLowerCase();
 
             if (
                 label.includes("back") ||
                 label.includes("rear") ||
                 label.includes("environment")
             ) {
-                preferredCamera = device.deviceId;
+                preferred = device.deviceId;
             }
         });
 
-        if (preferredCamera) {
-            cameraSelect.value = preferredCamera;
+        if (preferred) {
+            cameraSelect.value = preferred;
         }
 
         statusDiv.textContent =
-            `${devices.length} camera(s) available`;
-        statusDiv.className = "";
+            `${devices.length} camera(s) found`;
 
     } catch (err) {
-
         console.error(err);
-
         statusDiv.textContent =
-            "Unable to enumerate cameras.";
+            "Camera access failed.";
         statusDiv.className = "error";
     }
 }
 
 async function stopScanner() {
-
     try {
         if (currentControls) {
             currentControls.stop();
@@ -133,20 +93,11 @@ async function startScanner() {
 
     const deviceId = cameraSelect.value;
 
-    if (!deviceId) {
-        statusDiv.textContent =
-            "Select a camera first.";
-        statusDiv.className = "error";
-        return;
-    }
-
     resultDiv.textContent =
-        "Looking for Code 39 barcode...";
+        "Scanning for Code 39...";
 
     statusDiv.textContent =
-        "Scanner running";
-
-    statusDiv.className = "";
+        "Camera active";
 
     try {
 
@@ -154,55 +105,41 @@ async function startScanner() {
             await codeReader.decodeFromVideoDevice(
                 deviceId,
                 video,
-                (result, error) => {
+                async (result, error) => {
 
                     if (result) {
 
                         const value =
                             result.getText().trim();
 
-                        if (value !== lastScan) {
+                        // STOP IMMEDIATELY AFTER FIRST SCAN
+                        resultDiv.textContent = value;
+                        resultDiv.className = "success";
 
-                            lastScan = value;
+                        statusDiv.textContent =
+                            "Scan complete (camera stopped)";
 
-                            resultDiv.textContent =
-                                value;
+                        console.log("Code39:", value);
 
-                            resultDiv.className =
-                                "success";
-
-                            beep();
-
-                            console.log(
-                                "Code39:",
-                                value
-                            );
+                        try {
+                            await stopScanner();
+                        } catch (e) {
+                            console.error(e);
                         }
                     }
                 }
             );
 
     } catch (err) {
-
         console.error(err);
-
         statusDiv.textContent =
-            "Failed to start scanner: " +
-            err.message;
-
+            "Failed to start scanner: " + err.message;
         statusDiv.className = "error";
     }
 }
 
-startBtn.addEventListener(
-    "click",
-    startScanner
-);
-
-stopBtn.addEventListener(
-    "click",
-    stopScanner
-);
+startBtn.addEventListener("click", startScanner);
+stopBtn.addEventListener("click", stopScanner);
 
 (async () => {
 
@@ -219,16 +156,15 @@ stopBtn.addEventListener(
 
         await loadCameras();
 
-        if (cameraSelect.options.length > 0) {
-            await startScanner();
-        }
+        statusDiv.textContent =
+            "Ready to scan";
 
     } catch (err) {
 
         console.error(err);
 
         statusDiv.textContent =
-            "Camera permission denied.";
+            "Camera permission denied";
         statusDiv.className = "error";
     }
 
